@@ -1,7 +1,7 @@
 const   path = require('path'),
         fs   = require('fs'),
-        mime = require('mime-types');
-
+        mime = require('mime-types'),
+ rangeParser = require('range-parser');
 
 const logAndError = (err, res) => {
     console.log(err);
@@ -58,28 +58,34 @@ class Handler {
     }    
     static async streamVideo(req, res){
         try{
-            const fileName  = `${req.params.videoId}.mp4`,
-                  filePath  = path.join(__dirname, `../../../uploads/${fileName}`),
-                  stat      = fs.statSync(filePath),
-                  range     = req.headers.range || 'bytes=0-',
-                  positions = rangeParser(stat.size, range, { combine: true });
+            const fileName  = req.params.videoId,
+                   filePath = getFilePath(fileName);
 
-            if (Array.isArray(positions)) {
-                return res.status(416).send('Requested range not satisfiable');
-            }
-            const start = positions.start,
-                    end = ( positions.end === Infinity ? stat.size - 1 : positions.end ),
-                    length = end - start + 1,
+            if(filePath && fs.existsSync(filePath)){
+                const stat    = fs.statSync(filePath),
+                    range     = req.headers.range || 'bytes=0-',
+                    positions = rangeParser(stat.size, range, { combine: true });
+
+                if (Array.isArray(positions) && positions.length > 1) {
+                    return res.status(416).send('Requested range not satisfiable');
+                }
+                const start = positions[0].start,
+                        end = ( positions[0].end === Infinity ? stat.size - 1 : positions[0].end ),
+                     length = end - start + 1,
                     headers = {
-                    'Content-Range': `bytes ${start}-${end}/${stat.size}`,
-                    'Accept-Ranges': 'bytes',
-                    'Content-Length': length,
-                    'Content-Type': 'video/mp4'
-                };
+                        'Content-Range'  : `bytes ${start}-${end}/${stat.size}`,
+                        'Accept-Ranges'  : 'bytes',
+                        'Content-Length' : length,
+                        'Content-Type'   : 'video/mp4'
+                    };
 
-            res.writeHead(206, headers);
-            const stream = fs.createReadStream(filePath, { start, end });
-            stream.pipe(res);
+                res.writeHead(206, headers);
+                const stream = fs.createReadStream(filePath, { start, end });
+                stream.pipe(res);
+            }
+            else{
+                res.status(404).send('File not found.');
+            }
         } catch(err){
             logAndError(err, res);
         }
