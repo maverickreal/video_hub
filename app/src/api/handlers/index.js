@@ -1,5 +1,6 @@
 const   path = require('path'),
-        fs   = require('fs');
+        fs   = require('fs'),
+        mime = require('mime-types');
 
 
 const logAndError = (err, res) => {
@@ -11,7 +12,7 @@ class Handler {
     static async uploadVideo(req, res){
         try{
             if(req.file){
-                res.status(200).send('Uploaded.');
+                res.status(200).send(req.videoId);
             }
             else{
                 res.status(400).send('Proper video file not provided with.');
@@ -22,17 +23,28 @@ class Handler {
     }
     static async downloadVideo(req, res){
         try{
-            const fileName   = `${req.params.videoId}.mp4`,
-                  filePath   = path.join(__dirname, `../../../uploads/${fileName}`),
-                  fileStream = fs.createReadStream(filePath);
-
-            res.setHeader('Content-disposition', `attachment; filename=${req.params.videoId}`);
-            res.setHeader('Content-type', 'video/mp4');
-            fileStream.pipe(res);
+            const fileName   = req.params.videoId,
+                  folderPath = path.join(__dirname, '../../../uploads'),
+                  files      = fs.readdirSync(folderPath),
+                  fileRegex  = new RegExp(`^${fileName}.*$`),
+                  fileMatch  = files.find(file => fileRegex.test(file)),
+                  filePath   = path.join(folderPath, fileMatch);
+    
+            if (fileMatch && fs.existsSync(filePath)) {
+                const fileStream = fs.createReadStream(filePath),
+                      mimetype = mime.lookup(filePath);
+            
+                res.setHeader('Content-Type', mimetype);
+                res.setHeader('Content-Disposition', `attachment; filename=${fileName}`);
+                fileStream.pipe(res);
+            }
+            else{
+                res.status(404).send('File not found.');
+            }       
         } catch(err){
             logAndError(err, res);
         }
-    }
+    }    
     static async streamVideo(req, res){
         try{
             const fileName  = `${req.params.videoId}.mp4`,

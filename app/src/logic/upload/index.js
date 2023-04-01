@@ -15,7 +15,8 @@ const storage = multer.diskStorage({
   },
   filename: (req, file, cb)=>{
     const ext = path.extname(file.originalname);
-    cb(null, `${uuid()}${ext}`);
+    req.videoId = uuid();
+    cb(null, `${req.videoId}${ext}`);
   }
 });
 
