@@ -5,7 +5,7 @@ const   path = require('path'),
 
 const logAndError = (err, res) => {
     console.log(err);
-    res.status(500).send('Internal server error!');
+    res.status(500).send({error : 'Internal server error!'});
 }
 
 const getFilePath = fileName => {
@@ -27,10 +27,10 @@ class Handler {
     static async uploadVideo(req, res){
         try{
             if(req.file){
-                res.status(200).send(req.videoId);
+                res.status(200).send({videoId : req.videoId});
             }
             else{
-                res.status(400).send('Proper video file not provided with.');
+                res.status(400).send({error : 'Proper video file not provided with.'});
             }
         } catch(err){
             logAndError(err, res);
@@ -50,7 +50,7 @@ class Handler {
                 fileStream.pipe(res);
             }
             else{
-                res.status(404).send('File not found.');
+                res.status(404).send({error : 'File not found.'});
             }       
         } catch(err){
             logAndError(err, res);
@@ -67,7 +67,7 @@ class Handler {
                     positions = rangeParser(stat.size, range, { combine: true });
 
                 if (Array.isArray(positions) && positions.length > 1) {
-                    return res.status(416).send('Requested range not satisfiable');
+                    return res.status(416).send({error : 'Requested range not satisfiable'});
                 }
                 const start = positions[0].start,
                         end = ( positions[0].end === Infinity ? stat.size - 1 : positions[0].end ),
@@ -84,7 +84,7 @@ class Handler {
                 stream.pipe(res);
             }
             else{
-                res.status(404).send('File not found.');
+                res.status(404).send({error : 'File not found.'});
             }
         } catch(err){
             logAndError(err, res);
