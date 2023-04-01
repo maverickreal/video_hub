@@ -8,6 +8,21 @@ const logAndError = (err, res) => {
     res.status(500).send('Internal server error!');
 }
 
+const getFilePath = fileName => {
+    try{
+        const folderPath = path.join(__dirname, '../../../uploads'),
+              files      = fs.readdirSync(folderPath),
+              fileRegex  = new RegExp(`^${fileName}.*$`),
+              fileMatch  = files.find(file => fileRegex.test(file)),
+                filePath = path.join(folderPath, fileMatch);
+        return filePath;
+    }
+    catch(err){
+        console.log(err);
+        return null;
+    }
+}
+
 class Handler {
     static async uploadVideo(req, res){
         try{
@@ -23,14 +38,10 @@ class Handler {
     }
     static async downloadVideo(req, res){
         try{
-            const fileName   = req.params.videoId,
-                  folderPath = path.join(__dirname, '../../../uploads'),
-                  files      = fs.readdirSync(folderPath),
-                  fileRegex  = new RegExp(`^${fileName}.*$`),
-                  fileMatch  = files.find(file => fileRegex.test(file)),
-                  filePath   = path.join(folderPath, fileMatch);
-    
-            if (fileMatch && fs.existsSync(filePath)) {
+            const fileName = req.params.videoId,
+                  filePath = getFilePath(fileName);
+
+            if (filePath && fs.existsSync(filePath)) {
                 const fileStream = fs.createReadStream(filePath),
                       mimetype = mime.lookup(filePath);
             
